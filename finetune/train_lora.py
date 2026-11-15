@@ -1,126 +1,169 @@
 """
-finetune/train_lora.py
-LoRA fine-tuning of Qwen2.5-Coder on SQL pairs from this project's examples file.
-Requires a GPU (Colab T4 or better).  Run on Colab or a Linux machine with CUDA.
+QLoRA fine-tuning of the same Qwen2.5-Coder 7B Instruct base used by Ollama.
 
-This file is NOT needed to run the main project.
-The project works out of the box with ollama pull qwen2.5-coder:7b.
+Run on a CUDA GPU host from the repository root:
+    python finetune/train_lora.py
 """
-# NOTE: install on Colab first:
-#   pip install transformers peft datasets trl accelerate bitsandbytes torch
+import json
+import os
+import sys
 
-import json, sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-PROMPT_TEMPLATE = (
-    "You are an expert SQL assistant.\n\n"
-    "Database schema:\n{schema}\n\n"
-    "Question: {question}\n\n"
-    "SQL:"
-)
+import config
+from core.prompts import sql_generation_prompt
+
 OUTPUT_DIR = "finetune/out/lora"
-MODEL_NAME = "Qwen/Qwen2.5-Coder-3B-Instruct"
+MODEL_NAME = "Qwen/Qwen2.5-Coder-7B-Instruct"
+MAX_LENGTH = 1024
 
 
 def load_examples():
-    """Load project examples + optionally a HuggingFace dataset."""
-    with open("data/examples.json") as f:
-        local = json.load(f)
-    pairs = [{"question": e["q"], "sql": e["sql"]} for e in local]
-
-    # optionally add b-mc2/sql-create-context (small public dataset)
-    try:
-        from datasets import load_dataset
-        remote = load_dataset("b-mc2/sql-create-context", split="train").select(range(500))
-        for row in remote:
-            pairs.append({"question": row["question"], "sql": row["answer"],
-                          "schema": row.get("context", "")})
-        print(f"loaded {len(remote)} rows from b-mc2/sql-create-context")
-    except Exception as e:
-        print(f"skipping remote dataset: {e}")
-
-    return pairs
+    """Load only the project's curated examples; keep the gold eval set untouched."""
+    with open(config.EXAMPLES_PATH, encoding="utf-8") as f:
+        examples = json.load(f)
+    if not examples:
+        raise ValueError(f"No training examples found in {config.EXAMPLES_PATH}")
+    return [{"question": row["q"], "sql": row["sql"]} for row in examples]
 
 
-def build_dataset(pairs, schema_str):
-    from datasets import Dataset
+def get_schema():
+    from sqlalchemy import create_engine, inspect
 
-    def fmt(ex):
-        schema = ex.get("schema", schema_str)
-        text = (
-            PROMPT_TEMPLATE.format(schema=schema, question=ex["question"])
-            + " " + ex["sql"]
+    engine = create_engine(config.DATABASE_URL)
+    inspector = inspect(engine)
+    schema = "\n".join(
+        f"{table}({', '.join(column['name'] for column in inspector.get_columns(table))})"
+        for table in inspector.get_table_names()
+    )
+    engine.dispose()
+    if not schema:
+        raise RuntimeError(f"No tables found in database {config.DATABASE_URL}")
+    return schema
+
+
+def tokenize_examples(examples, schema, tokenizer, max_length=MAX_LENGTH):
+    """Tokenize prompt/SQL pairs and mask prompt tokens from the training loss."""
+    records = []
+    for example in examples:
+        prompt = sql_generation_prompt(
+            example["question"],
+            example.get("schema", schema),
         )
-        return {"text": text}
-
-    return Dataset.from_list([fmt(p) for p in pairs])
+        answer = f"\n```sql\n{example['sql'].strip()}\n```{tokenizer.eos_token}"
+        prompt_ids = tokenizer(prompt, add_special_tokens=True)["input_ids"]
+        full_ids = tokenizer(
+            prompt + answer,
+            add_special_tokens=True,
+            truncation=True,
+            max_length=max_length,
+        )["input_ids"]
+        prompt_length = min(len(prompt_ids), len(full_ids))
+        labels = [-100] * prompt_length + full_ids[prompt_length:]
+        if not any(label != -100 for label in labels):
+            raise ValueError(
+                f"SQL answer was truncated for question: {example['question']}"
+            )
+        records.append({
+            "input_ids": full_ids,
+            "attention_mask": [1] * len(full_ids),
+            "labels": labels,
+        })
+    return records
 
 
 def train():
     import torch
-    from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-    from peft import LoraConfig, get_peft_model, TaskType
-    from trl import SFTTrainer, SFTConfig
 
-    # get schema
-    from sqlalchemy import create_engine, inspect
-    import config
-    engine = create_engine(config.DATABASE_URL)
-    insp   = inspect(engine)
-    schema_lines = []
-    for t in insp.get_table_names():
-        cols = ", ".join(c["name"] for c in insp.get_columns(t))
-        schema_lines.append(f"{t}({cols})")
-    schema_str = "\n".join(schema_lines)
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            "QLoRA training requires a CUDA GPU. Run this script on a GPU host "
+            "(for example, Google Colab with a GPU runtime)."
+        )
 
-    pairs   = load_examples()
-    dataset = build_dataset(pairs, schema_str)
-    print(f"training on {len(dataset)} examples")
-
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_quant_type="nf4",
+    from datasets import Dataset
+    from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
+    from transformers import (
+        AutoModelForCausalLM,
+        AutoTokenizer,
+        BitsAndBytesConfig,
+        DataCollatorForSeq2Seq,
+        Trainer,
+        TrainingArguments,
     )
+
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    if tokenizer.eos_token is None:
+        raise RuntimeError(f"{MODEL_NAME} tokenizer has no EOS token")
+    tokenizer.pad_token = tokenizer.eos_token
+
+    quantization = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.bfloat16
+        if torch.cuda.is_bf16_supported()
+        else torch.float16,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+    )
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        quantization_config=bnb_config,
+        quantization_config=quantization,
         device_map="auto",
     )
-
-    lora_config = LoraConfig(
-        r=16, lora_alpha=32,
-        target_modules=["q_proj", "v_proj"],
-        lora_dropout=0.05,
-        bias="none",
-        task_type=TaskType.CAUSAL_LM,
+    model.config.use_cache = False
+    model = prepare_model_for_kbit_training(model)
+    model = get_peft_model(
+        model,
+        LoraConfig(
+            r=16,
+            lora_alpha=32,
+            target_modules=[
+                "q_proj", "k_proj", "v_proj", "o_proj",
+                "gate_proj", "up_proj", "down_proj",
+            ],
+            lora_dropout=0.05,
+            bias="none",
+            task_type=TaskType.CAUSAL_LM,
+        ),
     )
-    model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
-    sft_config = SFTConfig(
+    examples = load_examples()
+    records = tokenize_examples(examples, get_schema(), tokenizer)
+    dataset = Dataset.from_list(records)
+    print(f"Training {MODEL_NAME} on {len(dataset)} project examples")
+
+    training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
         num_train_epochs=3,
-        per_device_train_batch_size=4,
-        gradient_accumulation_steps=4,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=8,
         learning_rate=2e-4,
-        fp16=True,
-        logging_steps=10,
+        fp16=not torch.cuda.is_bf16_supported(),
+        bf16=torch.cuda.is_bf16_supported(),
+        gradient_checkpointing=True,
+        logging_steps=1,
         save_strategy="epoch",
-        dataset_text_field="text",
-        max_seq_length=512,
+        save_total_limit=2,
+        optim="paged_adamw_8bit",
+        report_to="none",
     )
-    trainer = SFTTrainer(
+    trainer = Trainer(
         model=model,
+        args=training_args,
         train_dataset=dataset,
-        args=sft_config,
-        tokenizer=tokenizer,
+        data_collator=DataCollatorForSeq2Seq(
+            tokenizer=tokenizer,
+            model=model,
+            label_pad_token_id=-100,
+            pad_to_multiple_of=8,
+        ),
     )
     trainer.train()
     trainer.save_model(OUTPUT_DIR)
+    tokenizer.save_pretrained(OUTPUT_DIR)
     print(f"LoRA adapter saved to {OUTPUT_DIR}")
-    print("Next: run  python finetune/merge.py  to merge into a full model")
+    print("Next: run python finetune/merge.py, then convert and import the GGUF into Ollama.")
 
 
 if __name__ == "__main__":

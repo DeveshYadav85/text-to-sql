@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import sqlglot
 from sqlglot.optimizer import optimize as sqlglot_optimize
 
+import config
 from core.llm import get_llm
 from core.prompts import optimization_prompt
 from agents.executor_agent import run as execute_sql
@@ -42,8 +43,8 @@ def run(sql, context, use_llm_rewrite=True):
     # step 1: sqlglot static rewrite
     candidate = _sqlglot_rewrite(sql)
 
-    # step 2: LLM rewrite pass (optional)
-    if use_llm_rewrite:
+    # step 2: LLM rewrite pass (skipped on Colab SQL-only endpoint to avoid latency/timeout)
+    if use_llm_rewrite and config.LLM_BACKEND.strip().lower() != "colab":
         try:
             llm = get_llm()
             prompt = optimization_prompt(candidate, context)

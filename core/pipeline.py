@@ -9,6 +9,9 @@ Usage:
 import sys, os, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 import config
 import agents.schema_agent     as schema_agent
 import agents.sql_agent        as sql_agent
@@ -20,10 +23,13 @@ import agents.explainer_agent  as explainer_agent
 
 
 def _step(name, fn, *args, **kwargs):
-    """Run one agent step, capture timing and result for the trace."""
-    t0  = time.time()
+    """Run one agent step and display diagnostic timing."""
+    print(f"\n[START] {name}", flush=True)
+    t0 = time.time()
     out = fn(*args, **kwargs)
-    return {"step": name, "output": out, "time_s": round(time.time() - t0, 3)}
+    elapsed = round(time.time() - t0, 3)
+    print(f"[DONE] {name} - {elapsed}s", flush=True)
+    return {"step": name, "output": out, "time_s": elapsed}
 
 
 def run(question,
@@ -48,6 +54,7 @@ def run(question,
     sql      = None
     error    = None
     attempts = 0
+    s4       = {"output": {"valid": True}}
     max_tries = config.MAX_RETRIES if use_validation else 1
 
     for attempt in range(max_tries):
@@ -76,7 +83,7 @@ def run(question,
 
     # ── step 5: optimizer ────────────────────────────────────────────────────
     optimized_sql = final_sql
-    if use_optimizer and s4["output"]["valid"] if use_validation else True:
+    if use_optimizer and (not use_validation or s4["output"]["valid"]):
         s5 = _step("sql_optimization", optimizer_agent.run, final_sql, context)
         trace.append(s5)
         optimized_sql = s5["output"]["optimized_sql"]

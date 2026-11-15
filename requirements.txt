@@ -7,6 +7,7 @@ plotly
 streamlit>=1.35
 requests
 numpy
+python-dotenv
 
 # optional: postgres driver
 psycopg2-binary

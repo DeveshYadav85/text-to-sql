@@ -1,34 +1,62 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 # ── database ──────────────────────────────────────────────────────────────────
-DB_PATH = os.getenv("DB_PATH", "data/college.db")
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
+DB_PATH = os.getenv("DB_PATH", "data/college.db").strip()
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}").strip()
 
 # ── llm ───────────────────────────────────────────────────────────────────────
-# primary backend: ollama  (no paid APIs, runs fully local)
-LLM_BACKEND = os.getenv("LLM_BACKEND", "ollama")   # "ollama" or "huggingface"
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+# Supported backends: "colab", "ollama", "huggingface"
+LLM_BACKEND = os.getenv("LLM_BACKEND", "colab").strip().lower()
 
-# huggingface fallback (for machines without ollama)
-HF_MODEL = os.getenv("HF_MODEL", "Qwen/Qwen2.5-Coder-3B-Instruct")
-HF_FINETUNED = "finetune/out/merged"   # produced by finetune/merge.py
+# Colab API — fine-tuned Qwen 1.5B + LoRA adapter over FastAPI + ngrok
+COLAB_API_URL = os.getenv("COLAB_API_URL", "").strip().rstrip("/")
+COLAB_API_TOKEN = os.getenv("COLAB_API_TOKEN", "").strip()
+
+# Ollama configuration
+OLLAMA_FINETUNED_MODEL = "text-to-sql-qwen2.5-coder:7b"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", OLLAMA_FINETUNED_MODEL).strip()
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").strip().rstrip("/")
+
+# Hugging Face configuration
+HF_MODEL = os.getenv("HF_MODEL", "Qwen/Qwen2.5-Coder-7B-Instruct").strip()
+HF_FINETUNED = "finetune/out/merged"
 
 # ── rag ───────────────────────────────────────────────────────────────────────
 EMBED_MODEL = "all-MiniLM-L6-v2"
 CHROMA_DIR = "data/chroma"
-RAG_TOP_K = 3          # top results per doc type (tables, rules, fk, examples)
-RAG_EXPAND_FK = True   # expand retrieved tables with their FK neighbours
+RAG_TOP_K = 3
+RAG_EXPAND_FK = True
 
 # ── pipeline ──────────────────────────────────────────────────────────────────
-MAX_RETRIES = 3        # self-correction loop max attempts
-MAX_ROWS = 200         # row cap for execution
-QUERY_TIMEOUT = 30     # seconds
+MAX_RETRIES = 3
+MAX_ROWS = 200
+QUERY_TIMEOUT = 30
 
-# data files
+# ── data files ────────────────────────────────────────────────────────────────
 RULES_PATH = "data/business_rules.md"
 EXAMPLES_PATH = "data/examples.json"
 
+
 def best_hf_model():
-    """Return fine-tuned model if available, else base."""
+    """Return fine-tuned model if available, otherwise base model."""
     return HF_FINETUNED if os.path.isdir(HF_FINETUNED) else HF_MODEL
+
+
+def validate_config():
+    """Validate configuration for the selected backend."""
+    if LLM_BACKEND == "colab":
+        if not COLAB_API_URL:
+            raise ValueError("COLAB_API_URL is missing from .env")
+        if not COLAB_API_TOKEN:
+            raise ValueError("COLAB_API_TOKEN is missing from .env")
+    elif LLM_BACKEND == "ollama":
+        if not OLLAMA_URL:
+            raise ValueError("OLLAMA_URL is missing")
+    elif LLM_BACKEND == "huggingface":
+        if not HF_MODEL:
+            raise ValueError("HF_MODEL is missing")
+    else:
+        raise ValueError(f"Unsupported LLM_BACKEND: {LLM_BACKEND}")
