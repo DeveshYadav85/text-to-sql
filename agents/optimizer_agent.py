@@ -43,8 +43,8 @@ def run(sql, context, use_llm_rewrite=True):
     # step 1: sqlglot static rewrite
     candidate = _sqlglot_rewrite(sql)
 
-    # step 2: LLM rewrite pass (skipped on Colab SQL-only endpoint to avoid latency/timeout)
-    if use_llm_rewrite and config.LLM_BACKEND.strip().lower() != "colab":
+    # step 2: LLM rewrite pass (skipped on Colab / smart_local to avoid latency)
+    if use_llm_rewrite and config.LLM_BACKEND.strip().lower() not in ("colab", "smart_local"):
         try:
             llm = get_llm()
             prompt = optimization_prompt(candidate, context)

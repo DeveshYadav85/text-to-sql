@@ -120,9 +120,9 @@ def run(question, sql, columns, rows, df, num_cols, cat_cols):
     """
     chart = _pick_chart(df, num_cols, cat_cols)
 
-    # If using the remote Colab SQL-only model, generate explanation locally
-    # so we don't send English prose prompts to a SQL-only LoRA endpoint.
-    if config.LLM_BACKEND.strip().lower() == "colab":
+    # If using the remote Colab SQL-only model or smart_local, generate explanation locally
+    # so we don't send English prose prompts to a SQL-only endpoint.
+    if config.LLM_BACKEND.strip().lower() in ("colab", "smart_local"):
         explanation, insights = _local_explanation(question, columns, rows, df, num_cols, cat_cols)
         return {"explanation": explanation, "insights": insights, "chart": chart}
 

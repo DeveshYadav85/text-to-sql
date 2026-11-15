@@ -92,9 +92,10 @@ def validate(sql, schema, engine=None):
 
     # 6. EXPLAIN dry-run (only when engine is provided)
     if engine is not None:
+        from sqlalchemy import text as sa_text
         try:
             with engine.connect() as conn:
-                conn.execute(sqlglot.text(f"EXPLAIN {sql}"))
+                conn.execute(sa_text(f"EXPLAIN QUERY PLAN {sql}"))
         except Exception as e:
             raise ValueError(f"EXPLAIN failed: {e}")
 

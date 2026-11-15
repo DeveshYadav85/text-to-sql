@@ -8,8 +8,9 @@ DB_PATH = os.getenv("DB_PATH", "data/college.db").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}").strip()
 
 # ── llm ───────────────────────────────────────────────────────────────────────
-# Supported backends: "colab", "ollama", "huggingface"
+# Supported backends: "colab", "ollama", "huggingface", "smart_local"
 LLM_BACKEND = os.getenv("LLM_BACKEND", "colab").strip().lower()
+AUTO_FALLBACK = os.getenv("AUTO_FALLBACK", "true").strip().lower() in ("1", "true", "yes")
 
 # Colab API — fine-tuned Qwen 1.5B + LoRA adapter over FastAPI + ngrok
 COLAB_API_URL = os.getenv("COLAB_API_URL", "").strip().rstrip("/")
@@ -20,8 +21,8 @@ OLLAMA_FINETUNED_MODEL = "text-to-sql-qwen2.5-coder:7b"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", OLLAMA_FINETUNED_MODEL).strip()
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").strip().rstrip("/")
 
-# Hugging Face configuration
-HF_MODEL = os.getenv("HF_MODEL", "Qwen/Qwen2.5-Coder-7B-Instruct").strip()
+# Hugging Face configuration (1.5B for fast local Mac/CPU inference; 7B for GPU)
+HF_MODEL = os.getenv("HF_MODEL", "Qwen/Qwen2.5-Coder-1.5B-Instruct").strip()
 HF_FINETUNED = "finetune/out/merged"
 
 # ── rag ───────────────────────────────────────────────────────────────────────
