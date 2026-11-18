@@ -111,11 +111,20 @@ LIT_PAPERS = [
     },
 ]
 
+TEAM_MEMBERS = [
+    ["1", "Devesh Yadav", "240437", "LLM Wrapper, AST/CSP Validator, Self-Correction Loop & Core Orchestrator (core/)"],
+    ["2", "Chakshit Mehta", "240429", "QLoRA Fine-Tuning (Colab T4), FastAPI + ngrok Server & Model Merging (finetune/)"],
+    ["3", "Yash Bhardwaj", "240957", "Database Schema Design, Deterministic Seeding, 30 Business Rules & 102 Gold Queries (db/, data/)"],
+    ["4", "Anmol Bhardwaj", "240383", "Vector RAG Schema Store, ChromaDB/FAISS Indexing & FK Graph Retriever (rag/, agents/schema_agent.py)"],
+    ["5", "Avyam", "240417", "Equivalence SQL Optimizer, Read-Only Executor, Ablation Evaluator & Streamlit Dashboard (eval/, app.py)"],
+]
+
 TEAM_SPLIT_TABLE = [
-    ["Person 1", "Database, Business Rules & Gold Evaluation Set", "db/create_db.py, data/college.db, data/business_rules.md, data/examples.json, data/eval_set.json"],
-    ["Person 2", "Vector RAG Schema & Rule Retriever", "rag/indexer.py, rag/retriever.py, rag/schema_store.py, tests/test_rag.py"],
-    ["Person 3", "LLM Wrapper, AST/CSP Validator, Repair Loop, Optimizer & Read-Only Executor", "core/llm.py, core/validator.py, core/prompts.py, core/pipeline.py, agents/*, tests/test_validator.py"],
-    ["Person 4", "QLoRA Fine-Tuning, Ablation Evaluation & Streamlit Dashboard UI", "finetune/train_lora.py, finetune/colab_server.ipynb, eval/run_eval.py, app.py, docs/*"],
+    ["Devesh Yadav (240437)", "LLM Wrapper, AST/CSP Validator, Repair Loop & Orchestrator", "core/llm.py, core/validator.py, core/prompts.py, core/pipeline.py, tests/test_validator.py"],
+    ["Chakshit Mehta (240429)", "QLoRA Fine-Tuning (Colab T4), FastAPI + ngrok GPU Server & Model Merging", "finetune/train_lora.py, finetune/colab_server.ipynb, finetune/merge.py, tests/test_finetune.py"],
+    ["Yash Bhardwaj (240957)", "Database, Business Rules & Gold Evaluation Set", "db/create_db.py, data/college.db, data/business_rules.md, data/examples.json, data/eval_set.json"],
+    ["Anmol Bhardwaj (240383)", "Vector RAG Schema & Rule Retriever", "rag/indexer.py, rag/retriever.py, agents/schema_agent.py, tests/test_rag.py"],
+    ["Avyam (240417)", "SQL Optimizer, Read-Only Executor, Ablation Evaluation & Streamlit UI", "agents/optimizer_agent.py, agents/executor_agent.py, agents/explainer_agent.py, eval/run_eval.py, app.py"],
 ]
 
 TIMELINE_TABLE = [
@@ -211,6 +220,8 @@ def build_lit_review_docx(path):
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     p = doc.add_paragraph(
+        "Submitted by: Devesh Yadav (240437), Chakshit Mehta (240429), Yash Bhardwaj (240957), "
+        "Anmol Bhardwaj (240383) & Avyam (240417)\n"
         "Comparative analysis of foundational benchmarks and state-of-the-art Text-to-SQL / Agentic LLM "
         "architectures against our proposed Fine-Tuned + RAG + Self-Correcting Agentic Text-to-SQL System."
     )
@@ -243,7 +254,12 @@ def build_lit_review_pdf(path):
 
     story = [
         Paragraph("Literature Review Comparative Table — Agentic Text-to-SQL", title_style),
-        Spacer(1, 6),
+        Paragraph(
+            "<font size=9 color='#334155'><b>Team Members:</b> Devesh Yadav (240437) · Chakshit Mehta (240429) · "
+            "Yash Bhardwaj (240957) · Anmol Bhardwaj (240383) · Avyam (240417)</font>",
+            ParagraphStyle("SubLit", parent=styles["Normal"], alignment=1, spaceAfter=6)
+        ),
+        Spacer(1, 4),
     ]
 
     headers = [
@@ -374,38 +390,110 @@ lora_cfg = LoraConfig(
 def build_report_docx(path):
     doc = Document()
 
-    # ── Cover Page ────────────────────────────────────────────────────────────
-    h0 = doc.add_heading("END-SEMESTER ARTIFICIAL INTELLIGENCE PROJECT REPORT", level=1)
-    h0.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # ── Dedicated Formal Cover Page ───────────────────────────────────────────
+    banner_tbl = doc.add_table(rows=1, cols=1)
+    banner_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    b_cell = banner_tbl.rows[0].cells[0]
+    set_cell_shading(b_cell, "0F172A")
+    bp1 = b_cell.paragraphs[0]
+    bp1.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_top = bp1.add_run("\nEND-SEMESTER ARTIFICIAL INTELLIGENCE PROJECT REPORT\n")
+    r_top.bold = True
+    r_top.font.size = Pt(12)
+    r_top.font.color.rgb = RGBColor(147, 197, 253)
 
-    h1 = doc.add_heading("Agentic Text-to-SQL: A Multi-Agent Neuro-Symbolic System with Vector RAG, QLoRA Fine-Tuning, CSP Validation & Self-Correction", level=2)
-    h1.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    bp2 = b_cell.add_paragraph()
+    bp2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_main = bp2.add_run("AGENTIC TEXT-TO-SQL SYSTEM")
+    r_main.bold = True
+    r_main.font.size = Pt(24)
+    r_main.font.color.rgb = RGBColor(255, 255, 255)
 
-    sub = doc.add_paragraph(
-        "\nCourse Theme: AI for Human Insight and Capability Enhancement\n"
-        "Repository: https://github.com/DeveshYadav85/text-to-sql\n"
-        "Live Demo UI: Streamlit Multi-Agent Workbench (http://localhost:8501)\n"
+    bp3 = b_cell.add_paragraph()
+    bp3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_sub = bp3.add_run(
+        "A Multi-Agent Neuro-Symbolic Pipeline with Vector RAG, 4-Bit QLoRA Fine-Tuning,\n"
+        "Symbolic CSP Validation, Self-Correction Loop & Equivalence-Checked Optimization\n"
     )
-    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_sub.font.size = Pt(11.5)
+    r_sub.font.color.rgb = RGBColor(226, 232, 240)
 
-    # ── Table of Contents (Mirroring Sample Report) ───────────────────────────
-    doc.add_heading("Table of Contents", level=2)
-    toc_items = [
-        "1. Introduction (What is Agentic Text-to-SQL, Problem Statement, Objectives, Motivation, Significance, Challenges, Novelty Proposed)",
-        "2. Literature Review & Comparative Table (Spider, DIN-SQL, DAIL-SQL, MAC-SQL, QLoRA, Self-Debugging)",
-        "3. Methodology: Agentic Text-to-SQL as State-Space Search (States, Initial State, Goal State, Actions, Transition Model, Path Cost, Search Strategy Justification)",
-        "4. Knowledge Representation (Relational Schema Graph, Declarative Business Rules, Case Memory, Vector Embeddings & Small-vs-Large Schema Trade-off)",
-        "5. Text-to-SQL Validation as a Constraint Satisfaction Problem (CSP) & Applicability of Fuzzy Logic (Rubric Note 2)",
-        "6. CSP for a Particular Query Instance (Step-by-Step Trace on Flagship CSE Query)",
-        "7. Intelligent System Design, Team Architecture & AI vs. Non-AI Distinction (Rubric Note 1)",
-        "8. Implementation & QLoRA Fine-Tuning Details (Database, RAG, LLM, Validator, Executor, Fine-Tuning & Loss Curve)",
-        "9. Experimental Evaluation, Results & Ablation Study (Systems A, B, C + 3 Component Ablations across 102 Gold Queries)",
-        "10. Discussion, Error Analysis (5 Real Case Studies) & Common Engineering Pitfalls",
-        "11. Originality, Ethical Considerations, Conclusion & Future Scope",
-        "12. References (IEEE Format)",
+    doc.add_paragraph()
+
+    # Theme & Key Highlights Box
+    meta_tbl = doc.add_table(rows=3, cols=2)
+    meta_tbl.style = "Table Grid"
+    meta_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    meta_info = [
+        ("Course & Project Theme", "Artificial Intelligence — AI for Human Insight and Capability Enhancement"),
+        ("Core AI Architecture", "Qwen2.5-Coder (4-bit QLoRA) + ChromaDB/MiniLM Vector RAG + sqlglot AST/CSP Validator"),
+        ("Repository & Benchmark", "https://github.com/DeveshYadav85/text-to-sql  |  12 Tables · 102 Gold Queries · 88.2% Exec Accuracy"),
     ]
-    for item in toc_items:
-        doc.add_paragraph(item)
+    for idx, (k_txt, v_txt) in enumerate(meta_info):
+        c0, c1 = meta_tbl.rows[idx].cells
+        set_cell_shading(c0, "EFF6FF")
+        set_cell_shading(c1, "FFFFFF")
+        c0.text = k_txt
+        c1.text = v_txt
+        for r in c0.paragraphs[0].runs:
+            r.bold = True
+            r.font.size = Pt(9.5)
+            r.font.color.rgb = RGBColor(30, 58, 138)
+        for r in c1.paragraphs[0].runs:
+            r.font.size = Pt(9.5)
+
+    doc.add_paragraph()
+
+    # Team Members Box on Cover Page
+    tm_heading = doc.add_paragraph()
+    tm_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_tm = tm_heading.add_run("SUBMITTED BY — PROJECT TEAM MEMBERS")
+    r_tm.bold = True
+    r_tm.font.size = Pt(11.5)
+    r_tm.font.color.rgb = RGBColor(30, 58, 138)
+
+    add_styled_docx_table(
+        doc,
+        ["S. No.", "Student Name", "Roll / Enrolment No.", "Module Ownership & Technical Contribution"],
+        TEAM_MEMBERS,
+    )
+
+    # Executive Summary Box at bottom of Cover Page
+    abs_p = doc.add_paragraph()
+    abs_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    r_abs_title = abs_p.add_run("Executive Summary: ")
+    r_abs_title.bold = True
+    r_abs_title.font.size = Pt(9.5)
+    r_abs_title.font.color.rgb = RGBColor(30, 58, 138)
+    r_abs_body = abs_p.add_run(
+        "This report presents the design, formal AI modeling, QLoRA fine-tuning, and empirical evaluation of an "
+        "open-source Agentic Text-to-SQL system. By formulating query synthesis as an Error-Guided State-Space Search "
+        "and static verification as a Symbolic Constraint Satisfaction Problem (CSP), our full agentic pipeline "
+        "improves execution accuracy from 51.0% (pretrained baseline) to 69.6% (QLoRA fine-tuned) and 88.2% "
+        "(full agentic pipeline with RAG and 3-try repair loop), achieving a 99.0% SQL validity rate across 102 gold queries."
+    )
+    r_abs_body.font.size = Pt(9.2)
+
+    doc.add_page_break()
+
+    # ── Page 2: Table of Contents (Mirroring Sample Report) ───────────────────
+    toc_h = doc.add_heading("Table of Contents", level=1)
+    toc_h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    toc_rows = [
+        ["1.", "Introduction (What is Agentic Text-to-SQL, Problem Statement, Objectives, Motivation, Significance, Challenges, Novelty)", "3"],
+        ["2.", "Literature Review & Comparative Table (Spider, DIN-SQL, DAIL-SQL, MAC-SQL, QLoRA, Self-Debugging)", "5"],
+        ["3.", "Methodology: Agentic Text-to-SQL as State-Space Search (States, Initial/Goal State, Actions, Search Strategy)", "7"],
+        ["4.", "Knowledge Representation & Vector RAG Design (Schema Graph, Business Rules, Case Memory, Embeddings)", "9"],
+        ["5.", "SQL Validation as a Constraint Satisfaction Problem (CSP) & Applicability of Fuzzy Logic (Rubric Note 2)", "10"],
+        ["6.", "CSP Trace for a Particular Query Instance (Step-by-Step Verification & Self-Correction)", "11"],
+        ["7.", "Intelligent System Design, Team Task Split, 3-Week Timeline & AI vs. Non-AI Distinction (Rubric Note 1)", "12"],
+        ["8.", "Implementation Code & 4-Bit QLoRA Fine-Tuning Details (with Training Loss Curve)", "15"],
+        ["9.", "Experimental Evaluation, Results & Ablation Study (Systems A, B, C + 3 Component Ablations)", "18"],
+        ["10.", "Discussion, Error Analysis (5 Real Failure Case Studies) & Common Engineering Pitfalls", "20"],
+        ["11.", "Originality, Ethical Considerations, Conclusion & Future Scope", "22"],
+        ["12.", "References (IEEE Format)", "23"],
+    ]
+    add_styled_docx_table(doc, ["Sec.", "Section Title & Sub-Topics Covered", "Page"], toc_rows)
 
     doc.add_page_break()
 
@@ -751,31 +839,93 @@ def build_report_pdf(path):
         t.setStyle(TableStyle(style_cmds))
         return t
 
+    # ── Dedicated Formal PDF Cover Page ───────────────────────────────────────
+    banner_title = ParagraphStyle("BannerT", parent=styles["Normal"], fontSize=20, leading=25, alignment=1, textColor=colors.white, fontName="Helvetica-Bold")
+    banner_sub = ParagraphStyle("BannerSub", parent=styles["Normal"], fontSize=11, leading=15, alignment=1, textColor=colors.HexColor("#93C5FD"), fontName="Helvetica-Bold")
+    banner_desc = ParagraphStyle("BannerDesc", parent=styles["Normal"], fontSize=9.8, leading=13.5, alignment=1, textColor=colors.HexColor("#E2E8F0"))
+
+    cover_banner = Table([
+        [Paragraph("END-SEMESTER ARTIFICIAL INTELLIGENCE PROJECT REPORT", banner_sub)],
+        [Paragraph("AGENTIC TEXT-TO-SQL SYSTEM", banner_title)],
+        [Paragraph(
+            "A Multi-Agent Neuro-Symbolic Pipeline with Vector RAG, 4-Bit QLoRA Fine-Tuning,<br/>"
+            "Symbolic CSP Validation, Self-Correction Loop &amp; Equivalence-Checked Optimization",
+            banner_desc
+        )],
+    ], colWidths=[7.0*inch])
+    cover_banner.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+        ("TOPPADDING", (0, 0), (-1, 0), 16),
+        ("BOTTOMPADDING", (0, -1), (-1, -1), 16),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+    ]))
+
+    meta_rows = [
+        ["Course & Project Theme", "Artificial Intelligence — AI for Human Insight and Capability Enhancement"],
+        ["Core AI Architecture", "Qwen2.5-Coder (4-bit QLoRA) + ChromaDB/MiniLM Vector RAG + sqlglot AST/CSP Validator"],
+        ["GitHub Repository", "https://github.com/DeveshYadav85/text-to-sql"],
+        ["Key Benchmark Result", "88.2% Execution Accuracy & 99.0% SQL Validity across 102 Gold Queries (130/130 Tests Pass)"],
+    ]
+    meta_tbl = make_rl_table(["Project Attribute", "Details"], meta_rows, [1.8*inch, 5.2*inch])
+
+    team_tbl = make_rl_table(
+        ["S. No.", "Student Name", "Roll / ID No.", "Module Ownership & Technical Contribution"],
+        TEAM_MEMBERS,
+        [0.55*inch, 1.45*inch, 1.0*inch, 4.0*inch]
+    )
+
+    exec_summary_box = Table([[
+        Paragraph(
+            "<b>Executive Summary:</b> This report presents the end-to-end architecture, formal AI modeling, QLoRA fine-tuning, "
+            "and empirical ablation study of an open-source Agentic Text-to-SQL system. By formulating SQL synthesis as an "
+            "<b>Error-Guided State-Space Search</b> and static query verification as a <b>Symbolic Constraint Satisfaction Problem (CSP)</b>, "
+            "our full agentic pipeline elevates execution accuracy from <b>51.0%</b> (System A: Pretrained Baseline) to <b>69.6%</b> "
+            "(System B: 4-Bit QLoRA Fine-Tuned) and <b>88.2%</b> (System C: Full Agentic Pipeline with Vector RAG + 3-Try Repair Loop), "
+            "achieving a <b>99.0% SQL validity rate</b> across 102 gold-standard queries on a 12-table College Relational Database.",
+            body_s
+        )
+    ]], colWidths=[7.0*inch])
+    exec_summary_box.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFF6FF")),
+        ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#2563EB")),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+    ]))
+
+    toc_rows_pdf = [
+        ["1.", "Introduction (What is Agentic Text-to-SQL, Problem Statement, Objectives, Motivation, Significance, Challenges, Novelty)"],
+        ["2.", "Literature Review & Comparative Table (Spider, DIN-SQL, DAIL-SQL, MAC-SQL, QLoRA, Self-Debugging)"],
+        ["3.", "Methodology: Agentic Text-to-SQL as State-Space Search (States, Initial/Goal State, Actions, Search Strategy)"],
+        ["4.", "Knowledge Representation & RAG Design (Schema Graph, Business Rules, Case Memory, Small-vs-Large Schema Trade-off)"],
+        ["5.", "SQL Validation as a Constraint Satisfaction Problem (CSP) & Applicability of Fuzzy Logic (Rubric Note 2)"],
+        ["6.", "CSP Trace for a Particular Query Instance (Step-by-Step Verification & Self-Correction)"],
+        ["7.", "Intelligent System Design, 5-Member Team Split, 3-Week Timeline & AI vs. Non-AI Distinction (Rubric Note 1)"],
+        ["8.", "Implementation Code & QLoRA Fine-Tuning Loss Curve"],
+        ["9.", "Experimental Evaluation: Systems A (Baseline), B (Fine-Tuned), C (Full Agentic) & Component Ablations"],
+        ["10.", "Discussion, Error Analysis (5 Case Studies) & Common Engineering Pitfalls"],
+        ["11.", "Originality, Ethical Considerations, Conclusion & Future Work"],
+        ["12.", "References (IEEE Format)"],
+    ]
+
     story = [
+        cover_banner,
         Spacer(1, 14),
-        Paragraph("END-SEMESTER ARTIFICIAL INTELLIGENCE PROJECT REPORT", title_s),
-        Paragraph("Agentic Text-to-SQL: A Multi-Agent Neuro-Symbolic System with Vector RAG, QLoRA Fine-Tuning, CSP Validation &amp; Self-Correction", sub_s),
-        Paragraph("<b>Course Theme:</b> AI for Human Insight and Capability Enhancement<br/><b>GitHub Repository:</b> https://github.com/DeveshYadav85/text-to-sql", sub_s),
+        meta_tbl,
+        Spacer(1, 14),
+        Paragraph("<b>Submitted By — Project Team Members</b>", h2_s),
+        team_tbl,
+        Spacer(1, 16),
+        exec_summary_box,
+        PageBreak(),
+        Paragraph("Table of Contents", title_s),
         Spacer(1, 8),
-        Paragraph("Table of Contents", h1_s),
+        make_rl_table(["Sec.", "Section Title & Sub-Topics Covered"], toc_rows_pdf, [0.55*inch, 6.45*inch]),
+        PageBreak(),
     ]
-    toc_lines = [
-        "1. Introduction (What is Agentic Text-to-SQL, Problem Statement, Objectives, Motivation, Significance, Challenges, Novelty)",
-        "2. Literature Review &amp; Comparative Table (Spider, DIN-SQL, DAIL-SQL, MAC-SQL, QLoRA, Self-Debugging)",
-        "3. Methodology: Agentic Text-to-SQL as State-Space Search",
-        "4. Knowledge Representation &amp; RAG Design (Small vs. Large Schema Trade-off)",
-        "5. SQL Validation as a Constraint Satisfaction Problem (CSP) &amp; Applicability of Fuzzy Logic (Rubric Note 2)",
-        "6. CSP Trace for a Particular Query Instance",
-        "7. Intelligent System Design, 4-Person Team Split, 3-Week Timeline &amp; AI vs. Non-AI Distinction (Rubric Note 1)",
-        "8. Implementation Code &amp; QLoRA Fine-Tuning Loss Curve",
-        "9. Experimental Evaluation: Systems A (Baseline), B (Fine-Tuned), C (Full Agentic) &amp; Component Ablations",
-        "10. Discussion, Error Analysis (5 Case Studies) &amp; Common Engineering Pitfalls",
-        "11. Originality, Ethical Considerations, Conclusion &amp; Future Work",
-        "12. References",
-    ]
-    for l in toc_lines:
-        story.append(Paragraph(l, body_s))
-    story.append(PageBreak())
 
     # Render main report sections into PDF
     story.append(Paragraph("1. Introduction", h1_s))
@@ -906,6 +1056,7 @@ def build_presentation_pptx(path):
 
     p2 = tf.add_paragraph()
     p2.text = (
+        "\n• Team Members: Devesh Yadav (240437) · Chakshit Mehta (240429) · Yash Bhardwaj (240957) · Anmol Bhardwaj (240383) · Avyam (240417)"
         "\n• Theme: AI for Human Insight and Capability Enhancement"
         "\n• Systems Compared: A (Pretrained Baseline) vs. B (LoRA Fine-Tuned) vs. C (Full Agentic + 3 Ablations)"
         "\n• Stack: Qwen2.5-Coder (4-bit QLoRA) · ChromaDB/FAISS RAG · sqlglot AST/CSP · SQLite/Postgres · Streamlit"
@@ -1001,17 +1152,18 @@ def build_presentation_pptx(path):
 
     # Slide 8: Team Task Split, Timeline & AI vs Non-AI (Rubric Note 1)
     s8 = prs.slides.add_slide(blank_layout)
-    add_slide_header(s8, "7. Team Split, 3-Week Timeline & AI vs. Non-AI Components", "Rubric Item 7 & Note 1: Modular engineering and AI vs. traditional software distinction")
+    add_slide_header(s8, "7. Team Task Split, 3-Week Timeline & AI vs. Non-AI Components", "Rubric Item 7 & Note 1: 5-Member Ownership & AI vs. Traditional Engineering Distinction")
     add_bullets(s8, [
-        "• 4-Module Ownership Split:",
-        "   - Module 1 (db/, data/): 12-table seeded college.db, 30 business rules, 40 examples, 102 gold eval queries.",
-        "   - Module 2 (rag/): Vector indexing & retrieval (ChromaDB/FAISS + all-MiniLM-L6-v2).",
-        "   - Module 3 (core/, agents/): LLM wrapper, sqlglot CSP validator, 3-try repair loop, optimizer, read-only executor.",
-        "   - Module 4 (finetune/, eval/, app.py): QLoRA training, Colab T4 server, ablation runner, Streamlit UI.",
+        "• 5-Member Team Task Split (Shared Contract: pipeline.run(question) -> dict):",
+        "   - Devesh Yadav (240437): LLM wrapper, sqlglot AST/CSP validator, 3-try self-correction loop & orchestrator (core/).",
+        "   - Chakshit Mehta (240429): 4-Bit QLoRA fine-tuning (Colab T4), FastAPI + ngrok server & adapter merging (finetune/).",
+        "   - Yash Bhardwaj (240957): 12-table seeded college.db, 30 business rules, 40 examples & 102 gold eval queries (db/, data/).",
+        "   - Anmol Bhardwaj (240383): Vector RAG schema store, ChromaDB/FAISS indexing & FK graph retriever (rag/).",
+        "   - Avyam (240417): Equivalence SQL optimizer, read-only executor, ablation runner & Streamlit dashboard UI (eval/, app.py).",
         "• Rubric Note 1 — AI vs. Non-AI Component Distinction:",
         "   - AI Components: Bi-Encoder Vector Embeddings (MiniLM), 4-Bit QLoRA Fine-Tuned Qwen2.5-Coder, Contextual Self-Repair, NL Insights.",
         "   - Non-AI Components: sqlglot AST/CSP Validator, Row-Equivalence Optimizer, Read-Only SQLite Sandbox (mode=ro), Pandas/Plotly UI."
-    ], font_size=14.5)
+    ], font_size=14)
 
     # Slide 9: QLoRA Fine-Tuning & Training Loss Curve
     s9 = prs.slides.add_slide(blank_layout)
